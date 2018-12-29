@@ -1,5 +1,5 @@
-#Python & Youtube API Client
-##Prerequisites
+# Python & Youtube API Client
+## Prerequisites
 We need credentials and an allowed app:
 - create or select a project in the **Google Developers Console** 
 - select the **OAuth consent screen tab**. Select an Email address, enter a Product name if not already set, and click the Save button
@@ -13,6 +13,6 @@ If this fails, copy the URL from the console and manually open it in your browse
 If you are not already logged into your Google account, you will be prompted to log in. 
 If you are logged into multiple Google accounts, you will be asked to select one account to use for the authorization.
 
-##Quick Start
+## Quick Start
  
-##Youtube Playlist
+## Youtube Playlist
