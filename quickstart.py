@@ -1,7 +1,6 @@
-# Sample Python code for user authorization
+# Youtube Python module to extract channel info (installed app way)
 
 import os
-
 import google.oauth2.credentials
 
 from googleapiclient.discovery import build

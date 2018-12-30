@@ -14,6 +14,12 @@ If you are not already logged into your Google account, you will be prompted to 
 If you are logged into multiple Google accounts, you will be asked to select one account to use for the authorization.
 
 ## Quick Start
-The Quickstart example print some info about a Youtube channel.
+### Installed App version
+The Quickstart example prints some info about a Youtube channel.
 Usage: `python quickstart.py <Youtube User Name>`
+
+### Installed App version
+Don't need to authenticate every time, but the server remains active with authenticated session.
+Usage: `python quickstart-webapp.py <Youtube User Name>` 
+
 ## Youtube Playlist

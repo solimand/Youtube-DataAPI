@@ -2,7 +2,7 @@
 .idea/
 
 # Private
-client_secret.json
+*client_secret.json
 
 # Environments
 .git/
