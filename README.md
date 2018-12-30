@@ -18,8 +18,9 @@ If you are logged into multiple Google accounts, you will be asked to select one
 The Quickstart example prints some info about a Youtube channel.
 Usage: `python quickstart.py <Youtube User Name>`
 
-### Installed App version
-Don't need to authenticate every time, but the server remains active with authenticated session.
+### Web Server version
+Don't need to authenticate every time, but the server remains active with an authenticated session.
 Usage: `python quickstart-webapp.py <Youtube User Name>` 
 
 ## Youtube Playlist
+_ASAP..._
