@@ -24,5 +24,5 @@ Usage: `python quickstart-webapp.py <Youtube User Name>`
 
 ## Youtube Playlist
 ### Installed App version
-The module yt-playlist get a list of playlist belonging to a channel ID
+The module yt-playlist gets a list of playlist belonging to a channel ID
 Usage: `python yt-playlist.py <Youtube Channel ID>` 
