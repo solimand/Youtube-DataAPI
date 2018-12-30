@@ -40,8 +40,16 @@ def channels_list_by_username(service, **kwargs):
 
 
 if __name__ == '__main__':
+    import sys
+
+    if len(sys.argv) < 2:
+        print('Usage: %s <Youtube Username>' %sys.argv[0])
+        sys.exit("Provide more args, please")
+
+    username = sys.argv[1]
+
     # When running locally, disable OAuthlib's HTTPs verification. When
     # running in production *do not* leave this option enabled.
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '0'
     service = get_authenticated_service()
-    channels_list_by_username(service, part='snippet,contentDetails,statistics', forUsername='GoogleDevelopers')
+    channels_list_by_username(service, part='snippet,contentDetails,statistics', forUsername=username)

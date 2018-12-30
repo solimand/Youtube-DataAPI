@@ -14,5 +14,6 @@ If you are not already logged into your Google account, you will be prompted to 
 If you are logged into multiple Google accounts, you will be asked to select one account to use for the authorization.
 
 ## Quick Start
- 
+The Quickstart example print some info about a Youtube channel.
+Usage: `python quickstart.py <Youtube User Name>`
 ## Youtube Playlist
