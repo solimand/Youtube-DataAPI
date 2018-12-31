@@ -1,5 +1,5 @@
 # Youtube Python module to extract channel playlists
-
+# TODO requiements file...
 import os
 
 import google.oauth2.credentials
@@ -84,31 +84,79 @@ def remove_empty_kwargs(**kwargs):
     return good_kwargs
 
 
-def playlists_list_by_channel_id(client, **kwargs):
-    # See full sample for function
+# Utils method
+def channelID_by_username(service, **kwargs):
+    results = service.channels().list(
+        **kwargs
+    ).execute()
+
+    # TEST
+    # print('This channel\'s ID is %s. Its title is %s, and it has %s views and %s subscribers.' %
+    #      (results['items'][0]['id'],
+    #       # 'snippet' and 'statistics' have many items inside
+    #       results['items'][0]['snippet']['title'],
+    #       results['items'][0]['statistics']['viewCount'],
+    #       results['items'][0]['statistics']['subscriberCount']))
+
+    channelID=results['items'][0]['id']
+    print('This channel\'s ID is %s.' % channelID)
+    return channelID
+
+
+# Utils method
+# TODO create playlistID_by_client_and_playlistName
+def playlists_list_by_channel_id(client, playlistName, **kwargs):
     kwargs = remove_empty_kwargs(**kwargs)
 
     response = client.playlists().list(
         **kwargs
     ).execute()
 
-    return print_response(response)
+    playlistCount = response['items'].__len__()
+    print ("Channel have %d playlists" % playlistCount)
 
-# TODO get channelID from username
+    for tmp in response['items']:
+        print (tmp['snippet']['title'])
+        if playlistName==tmp['snippet']['title']:
+            videoCount=tmp['contentDetails']['itemCount']
+            print('Playlist %s have %d videos' %(playlistName, videoCount))
+    return response
+
+
+# Utils method
+# TODO last useful method for listing video names
+def playlist_items_list_by_playlist_id(client, **kwargs):
+  kwargs = remove_empty_kwargs(**kwargs)
+
+  response = client.playlistItems().list(
+    **kwargs
+  ).execute()
+
+  return print_response(response)
+
+
 if __name__ == '__main__':
     import sys
 
-    if len(sys.argv) < 2:
-        print('Usage: %s <Youtube Channel ID>' % sys.argv[0])
+    if len(sys.argv) < 3:
+        print('Usage: %s <Youtube User Name> <Youtube Playlist Name>' % sys.argv[0])
         sys.exit("Provide more args, please")
 
-    channelID = sys.argv[1]
+    username = sys.argv[1]
+    playlistName = sys.argv[2]
 
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '0'
     client = get_authenticated_service()
 
-    playlists_list_by_channel_id(client,
+    channelID=channelID_by_username(client, part='snippet,contentDetails,statistics', forUsername=username)
+
+    playlistsList=playlists_list_by_channel_id(client, playlistName,
                                  part='snippet,contentDetails',
                                  # channelId='UCzmJVOcjfP_t6qzLoELapAw',
                                  channelId=channelID,
-                                 maxResults=25)
+                                 maxResults=50)
+
+    #playlist_items_list_by_playlist_id(client,
+    #                                  part='snippet,contentDetails',
+     #                                  maxResults=25,
+      #                                 playlistId='PLBCF2DAC6FFB574DE')
