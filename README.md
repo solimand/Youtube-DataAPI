@@ -23,6 +23,13 @@ Don't need to authenticate every time, but the server remains active with an aut
 Usage: `python quickstart-webapp.py <Youtube User Name>` 
 
 ## Youtube Playlist
-### Installed App version
-The module yt-playlist gets a list of playlist belonging to a channel ID
-Usage: `python yt-playlist.py <Youtube Channel ID>` 
+Providing a _Youtube user name_ and a _Youtube playlist name_ to the module yt-playlist, it gets:
+- the channel ID
+- the playlist ID
+- the name of the videos of the playlist
+Usage: `python yt-playlist.py <Youtube User Name> <Youtube Playlist Name>` 
+
+## References
+- https://developers.google.com/youtube/v3/quickstart/python
+- https://developers.google.com/youtube/v3/docs/playlists
+- https://developers.google.com/youtube/v3/docs/playlistItems

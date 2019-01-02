@@ -77,7 +77,7 @@ def build_resource(properties):
 def remove_empty_kwargs(**kwargs):
     good_kwargs = {}
     if kwargs is not None:
-        #for key, value in kwargs.iteritems():
+        # for key, value in kwargs.iteritems():
         for key, value in kwargs.items():
             if value:
                 good_kwargs[key] = value
@@ -104,8 +104,7 @@ def channelID_by_username(service, **kwargs):
 
 
 # Utils method
-# TODO create playlistID_by_client_and_playlistName
-def playlists_list_by_channel_id(client, playlistName, **kwargs):
+def playlistID_by_playlistName(client, playlistName, **kwargs):
     kwargs = remove_empty_kwargs(**kwargs)
 
     response = client.playlists().list(
@@ -113,26 +112,29 @@ def playlists_list_by_channel_id(client, playlistName, **kwargs):
     ).execute()
 
     playlistCount = response['items'].__len__()
-    print ("Channel have %d playlists" % playlistCount)
+    print("Channel have %d playlists" % playlistCount)
 
     for tmp in response['items']:
-        print (tmp['snippet']['title'])
+        print(tmp['snippet']['title'])
         if playlistName==tmp['snippet']['title']:
             videoCount=tmp['contentDetails']['itemCount']
-            print('Playlist %s have %d videos' %(playlistName, videoCount))
-    return response
+            playlistID=tmp['id']
+            print('Playlist %s have %d videos and ID = %s' %(playlistName, videoCount, playlistID))
+    return playlistID
 
 
 # Utils method
-# TODO last useful method for listing video names
 def playlist_items_list_by_playlist_id(client, **kwargs):
-  kwargs = remove_empty_kwargs(**kwargs)
+    kwargs = remove_empty_kwargs(**kwargs)
 
-  response = client.playlistItems().list(
+    response = client.playlistItems().list(
     **kwargs
-  ).execute()
+    ).execute()
 
-  return print_response(response)
+    for song in response['items']:
+        print(song['snippet']['title'])
+
+    # return print_response(response)
 
 
 if __name__ == '__main__':
@@ -148,15 +150,17 @@ if __name__ == '__main__':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '0'
     client = get_authenticated_service()
 
-    channelID=channelID_by_username(client, part='snippet,contentDetails,statistics', forUsername=username)
+    channelID=channelID_by_username(client, part='snippet,contentDetails,statistics',
+                                    forUsername=username)
 
-    playlistsList=playlists_list_by_channel_id(client, playlistName,
-                                 part='snippet,contentDetails',
-                                 # channelId='UCzmJVOcjfP_t6qzLoELapAw',
-                                 channelId=channelID,
-                                 maxResults=50)
+    playlistsID=playlistID_by_playlistName(client, playlistName,
+                                           part='snippet,contentDetails',
+                                           channelId=channelID,
+                                           maxResults=50)
 
-    #playlist_items_list_by_playlist_id(client,
-    #                                  part='snippet,contentDetails',
-     #                                  maxResults=25,
-      #                                 playlistId='PLBCF2DAC6FFB574DE')
+    playlist_items_list_by_playlist_id(client,
+                                      part='snippet,contentDetails',
+                                      maxResults=50,
+                                      # playlistId='PLSTNGToPzgRl5MNugg1hr6R12dL_2jbYM')
+                                       playlistId=playlistsID)
+    sys.exit(0)
