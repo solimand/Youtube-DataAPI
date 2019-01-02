@@ -27,7 +27,8 @@ Providing a _Youtube user name_ and a _Youtube playlist name_ to the module yt-p
 - the channel ID
 - the playlist ID
 - the name of the videos of the playlist
-Usage: `python yt-playlist.py <Youtube User Name> <Youtube Playlist Name>` 
+Usage: `python yt-playlist.py <Youtube User Name> <Youtube Playlist Name>`
+The module saves a file with all the song names in the home of the user (platform independently). 
 
 ## References
 - https://developers.google.com/youtube/v3/quickstart/python

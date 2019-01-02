@@ -1,12 +1,16 @@
 # Youtube Python module to extract channel playlists
 # TODO requiements file...
+
 import os
+import time
+from pathlib import Path
 
-import google.oauth2.credentials
+# import google.oauth2.credentials
+# import google_auth_oauthlib.flow
+# from googleapiclient.errors import HttpError
 
-import google_auth_oauthlib.flow
+from pathlib import Path
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 # The CLIENT_SECRETS_FILE variable specifies the name of a file that contains
@@ -27,8 +31,10 @@ def get_authenticated_service():
     return build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
 
 
-def print_response(response):
-    print(response)
+def print_playlist_items_name(playlist, file):
+    for song in playlist['items']:
+        # print(song['snippet']['title'])
+        file.write(song['snippet']['title']+'\n')
 
 
 # Build a resource based on a list of properties given as key-value pairs.
@@ -124,17 +130,35 @@ def playlistID_by_playlistName(client, playlistName, **kwargs):
 
 
 # Utils method
-def playlist_items_list_by_playlist_id(client, **kwargs):
+def playlist_items_list_by_playlist_id(client, playlistName, **kwargs):
     kwargs = remove_empty_kwargs(**kwargs)
 
     response = client.playlistItems().list(
-    **kwargs
+        **kwargs
     ).execute()
 
-    for song in response['items']:
-        print(song['snippet']['title'])
+    # playlist name could hava chars not allowed in file name...
+    # path is platform independent
+    file_name=('yt-playlist'+time.strftime("%Y%m%d")+'.txt')
+    path_to_file = Path.home() / file_name
+    video_names_file = open(path_to_file, 'w')
 
-    # return print_response(response)
+    while True:
+        print_playlist_items_name(response, video_names_file)
+
+        try:
+            next_page_token = response['nextPageToken']
+            print('Another page yet...')
+        except KeyError:
+            print("Last page reached or one-page result.")
+            break
+
+        response = client.playlistItems().list(
+            **kwargs,
+            pageToken=next_page_token
+        ).execute()
+
+    video_names_file.close()
 
 
 if __name__ == '__main__':
@@ -158,9 +182,10 @@ if __name__ == '__main__':
                                            channelId=channelID,
                                            maxResults=50)
 
-    playlist_items_list_by_playlist_id(client,
+    playlist_items_list_by_playlist_id(client, playlistName,
                                       part='snippet,contentDetails',
                                       maxResults=50,
-                                      # playlistId='PLSTNGToPzgRl5MNugg1hr6R12dL_2jbYM')
-                                       playlistId=playlistsID)
+                                      playlistId=playlistsID)
+
+    print("End of Program")
     sys.exit(0)
