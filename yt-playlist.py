@@ -91,7 +91,7 @@ def remove_empty_kwargs(**kwargs):
 
 
 # Utils method
-def channelID_by_username(service, **kwargs):
+def channelID_by_username(service, user_name, **kwargs):
     results = service.channels().list(
         **kwargs
     ).execute()
@@ -105,7 +105,7 @@ def channelID_by_username(service, **kwargs):
     #       results['items'][0]['statistics']['subscriberCount']))
 
     channelID=results['items'][0]['id']
-    print('This channel\'s ID is %s.' % channelID)
+    print('The channel %s has the ID: %s.' % (user_name, channelID))
     return channelID
 
 
@@ -120,6 +120,7 @@ def playlistID_by_playlistName(client, playlistName, **kwargs):
     playlistCount = response['items'].__len__()
     print("Channel have %d playlists" % playlistCount)
 
+    playlistID=None
     for tmp in response['items']:
         print(tmp['snippet']['title'])
         if playlistName==tmp['snippet']['title']:
@@ -137,8 +138,9 @@ def playlist_items_list_by_playlist_id(client, playlistName, **kwargs):
         **kwargs
     ).execute()
 
-    # playlist name could hava chars not allowed in file name...
-    # path is platform independent
+    # + Playlist name could hava chars not allowed in file name,
+    #       so i called the filename with the timestamp...
+    # + Path is platform independent
     file_name=('yt-playlist'+time.strftime("%Y%m%d")+'.txt')
     path_to_file = Path.home() / file_name
     video_names_file = open(path_to_file, 'w')
@@ -174,18 +176,21 @@ if __name__ == '__main__':
     os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '0'
     client = get_authenticated_service()
 
-    channelID=channelID_by_username(client, part='snippet,contentDetails,statistics',
+    channelID=channelID_by_username(client, username,
+                                    part='snippet,contentDetails,statistics',
                                     forUsername=username)
 
-    playlistsID=playlistID_by_playlistName(client, playlistName,
+    playlist_id=playlistID_by_playlistName(client, playlistName,
                                            part='snippet,contentDetails',
                                            channelId=channelID,
                                            maxResults=50)
 
-    playlist_items_list_by_playlist_id(client, playlistName,
+    if (playlist_id is not None):
+        playlist_items_list_by_playlist_id(client, playlistName,
                                       part='snippet,contentDetails',
                                       maxResults=50,
-                                      playlistId=playlistsID)
-
+                                      playlistId=playlist_id)
+    else:
+        print("No playlist with the name %s", playlistName)
     print("End of Program")
     sys.exit(0)
