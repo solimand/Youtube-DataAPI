@@ -4,16 +4,17 @@ Creates one .txt file per playlist.
 """
 
 import os
+import pickle
+import re
+import unicodedata
+
 from pathlib import Path
 from typing import List, Dict
 
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
-
-from google.oauth2.credentials import Credentials
+# from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
-import pickle
-
 
 # ==============================
 # CONFIG
@@ -106,15 +107,33 @@ def get_playlist_tracks(service, playlist_id: str) -> List[str]:
 # ==============================
 
 def save_playlist(name: str, tracks: List[str]):
+    """Save playlist tracks to a safe filename, overwriting if it exists."""
     OUTPUT_DIR.mkdir(exist_ok=True)
 
-    safe_name = "".join(c for c in name if c.isalnum() or c in " -_")
+    safe_name = normalize_filename(name)
+
     path = OUTPUT_DIR / f"{safe_name}.txt"
 
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(tracks))
 
     print(f"Saved {len(tracks)} tracks → {path}")
+
+def normalize_filename(name: str) -> str:
+    """Convert playlist title into safe filename.
+        - remove accents/emoji → ascii
+        - lowercase
+        - replace non-alphanumeric with dash
+        - collapse multiple dashes
+        - trim edges
+        - fallback if empty (e.g. "!!!")
+    """
+    name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    name = name.lower()
+    name = re.sub(r"[^a-z0-9]+", "-", name)
+    name = re.sub(r"-+", "-", name)
+    name = name.strip("-")
+    return name or "playlist"
 
 # ==============================
 # Choose client secret
@@ -165,14 +184,14 @@ def main(username: str):
 
     print(f"Found {len(playlists)} playlists\n")
 
-    # for playlist in playlists:
-    #     name = playlist["snippet"]["title"]
-    #     pid = playlist["id"]
+    for playlist in playlists:
+        name = playlist["snippet"]["title"]
+        pid = playlist["id"]
 
-    #     print(f"Fetching: {name}")
-    #     tracks = get_playlist_tracks(service, pid)
+        print(f"Fetching: {name}")
+        tracks = get_playlist_tracks(service, pid)
 
-    #     save_playlist(name, tracks)
+        save_playlist(name, tracks)
 
 
 if __name__ == "__main__":
