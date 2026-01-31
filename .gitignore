@@ -3,7 +3,8 @@
 .vscode/
 
 # Private
-*client_secret.json
+*client_secret*
+token.*
 
 # Environments
 .git/

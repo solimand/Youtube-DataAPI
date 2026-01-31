@@ -1,196 +1,188 @@
-# Youtube Python module to extract channel playlists
-# TODO requiements file...
+"""
+Export ALL playlists and their tracks from a YouTube account.
+Creates one .txt file per playlist.
+"""
 
 import os
-import time
 from pathlib import Path
+from typing import List, Dict
 
-# import google.oauth2.credentials
-# import google_auth_oauthlib.flow
-# from googleapiclient.errors import HttpError
-
-from pathlib import Path
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 
-# The CLIENT_SECRETS_FILE variable specifies the name of a file that contains
-# the OAuth 2.0 information for this application, including its client_id and
-# client_secret.
-CLIENT_SECRETS_FILE = "client_secret.json"
-
-# This OAuth 2.0 access scope allows for full read/write access to the
-# authenticated user's account and requires requests to use an SSL connection.
-SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl']
-API_SERVICE_NAME = 'youtube'
-API_VERSION = 'v3'
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+import pickle
 
 
-def get_authenticated_service():
-    flow = InstalledAppFlow.from_client_secrets_file(CLIENT_SECRETS_FILE, SCOPES)
-    credentials = flow.run_console()
-    return build(API_SERVICE_NAME, API_VERSION, credentials=credentials)
+# ==============================
+# CONFIG
+# ==============================
+
+SCOPES = ["https://www.googleapis.com/auth/youtube.readonly"]
+OUTPUT_DIR = Path.home() / "youtube_playlists"
+TOKEN_FILE = "token.pickle"
+
+# ==============================
+# AUTH
+# ==============================
+
+def get_service():
+    creds = None
+
+    # Load saved credentials
+    if Path(TOKEN_FILE).exists():
+        with open(TOKEN_FILE, "rb") as token:
+            creds = pickle.load(token)
+
+    # If no valid creds → login
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            secret_file = choose_client_secret_file()
+            flow = InstalledAppFlow.from_client_secrets_file(secret_file, SCOPES)
+            creds = flow.run_local_server(port=0)
+
+        # Save credentials for next run
+        with open(TOKEN_FILE, "wb") as token:
+            pickle.dump(creds, token)
+
+    return build("youtube", "v3", credentials=creds)
+
+# ==============================
+# API HELPERS
+# ==============================
+
+def paginate(list_next, request):
+    while request:
+        response = request.execute()
+        yield response
+        request = list_next(request, response)
 
 
-def print_playlist_items_name(playlist, file):
-    for song in playlist['items']:
-        # print(song['snippet']['title'])
-        file.write(song['snippet']['title']+'\n')
-
-
-# Build a resource based on a list of properties given as key-value pairs.
-# Leave properties with empty values out of the inserted resource.
-def build_resource(properties):
-    resource = {}
-    for p in properties:
-        # Given a key like "snippet.title", split into "snippet" and "title", where
-        # "snippet" will be an object and "title" will be a property in that object.
-        prop_array = p.split('.')
-        ref = resource
-        for pa in range(0, len(prop_array)):
-            is_array = False
-            key = prop_array[pa]
-
-            # For properties that have array values, convert a name like
-            # "snippet.tags[]" to snippet.tags, and set a flag to handle
-            # the value as an array.
-            if key[-2:] == '[]':
-                key = key[0:len(key) - 2:]
-                is_array = True
-
-            if pa == (len(prop_array) - 1):
-                # Leave properties without values out of inserted resource.
-                if properties[p]:
-                    if is_array:
-                        ref[key] = properties[p].split(',')
-                    else:
-                        ref[key] = properties[p]
-            elif key not in ref:
-                # For example, the property is "snippet.title", but the resource does
-                # not yet have a "snippet" object. Create the snippet object here.
-                # Setting "ref = ref[key]" means that in the next time through the
-                # "for pa in range ..." loop, we will be setting a property in the
-                # resource's "snippet" object.
-                ref[key] = {}
-                ref = ref[key]
-            else:
-                # For example, the property is "snippet.description", and the resource
-                # already has a "snippet" object.
-                ref = ref[key]
-    return resource
-
-
-# Remove keyword arguments that are not set
-def remove_empty_kwargs(**kwargs):
-    good_kwargs = {}
-    if kwargs is not None:
-        # for key, value in kwargs.iteritems():
-        for key, value in kwargs.items():
-            if value:
-                good_kwargs[key] = value
-    return good_kwargs
-
-
-# Utils method
-def channelID_by_username(service, user_name, **kwargs):
-    results = service.channels().list(
-        **kwargs
+def get_channel_id(service, username: str) -> str:
+    response = service.channels().list(
+        part="id",
+        forUsername=username
     ).execute()
 
-    # TEST
-    # print('This channel\'s ID is %s. Its title is %s, and it has %s views and %s subscribers.' %
-    #      (results['items'][0]['id'],
-    #       # 'snippet' and 'statistics' have many items inside
-    #       results['items'][0]['snippet']['title'],
-    #       results['items'][0]['statistics']['viewCount'],
-    #       results['items'][0]['statistics']['subscriberCount']))
-
-    channelID=results['items'][0]['id']
-    print('The channel %s has the ID: %s.' % (user_name, channelID))
-    return channelID
+    return response["items"][0]["id"]
 
 
-# Utils method
-def playlistID_by_playlistName(client, playlistName, **kwargs):
-    kwargs = remove_empty_kwargs(**kwargs)
+def get_all_playlists(service, channel_id: str) -> List[Dict]:
+    playlists = []
 
-    response = client.playlists().list(
-        **kwargs
-    ).execute()
+    request = service.playlists().list(
+        part="snippet,contentDetails",
+        channelId=channel_id,
+        maxResults=50
+    )
 
-    playlistCount = response['items'].__len__()
-    print("Channel have %d playlists" % playlistCount)
+    for page in paginate(service.playlists().list_next, request):
+        playlists.extend(page["items"])
 
-    playlistID=None
-    for tmp in response['items']:
-        print(tmp['snippet']['title'])
-        if playlistName==tmp['snippet']['title']:
-            videoCount=tmp['contentDetails']['itemCount']
-            playlistID=tmp['id']
-            print('Playlist %s have %d videos and ID = %s' %(playlistName, videoCount, playlistID))
-    return playlistID
+    return playlists
 
 
-# Utils method
-def playlist_items_list_by_playlist_id(client, playlistName, **kwargs):
-    kwargs = remove_empty_kwargs(**kwargs)
+def get_playlist_tracks(service, playlist_id: str) -> List[str]:
+    titles = []
 
-    response = client.playlistItems().list(
-        **kwargs
-    ).execute()
+    request = service.playlistItems().list(
+        part="snippet",
+        playlistId=playlist_id,
+        maxResults=50
+    )
 
-    # + Playlist name could hava chars not allowed in file name,
-    #       so i called the filename with the timestamp...
-    # + Path is platform independent
-    file_name=('yt-playlist'+time.strftime("%Y%m%d")+'.txt')
-    path_to_file = Path.home() / file_name
-    video_names_file = open(path_to_file, 'w')
+    for page in paginate(service.playlistItems().list_next, request):
+        for item in page["items"]:
+            titles.append(item["snippet"]["title"])
+
+    return titles
+
+
+# ==============================
+# FILE IO
+# ==============================
+
+def save_playlist(name: str, tracks: List[str]):
+    OUTPUT_DIR.mkdir(exist_ok=True)
+
+    safe_name = "".join(c for c in name if c.isalnum() or c in " -_")
+    path = OUTPUT_DIR / f"{safe_name}.txt"
+
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(tracks))
+
+    print(f"Saved {len(tracks)} tracks → {path}")
+
+# ==============================
+# Choose client secret
+# ==============================
+
+def choose_client_secret_file() -> Path:
+    """Search current folder for client_secret files and let user pick one."""
+
+    files = sorted(Path(".").glob("*client_secret*"))
+
+    if not files:
+        raise FileNotFoundError(
+            "No files containing 'client_secret' found in current directory."
+        )
+
+    # only one → auto select
+    if len(files) == 1:
+        print(f"Using client secret: {files[0].name}")
+        return files[0]
+
+    # multiple → ask user
+    print("\nAvailable client secret files:\n")
+
+    for i, f in enumerate(files, 1):
+        print(f"{i}) {f.name}")
 
     while True:
-        print_playlist_items_name(response, video_names_file)
+        choice = input("\nSelect file number: ")
 
-        try:
-            next_page_token = response['nextPageToken']
-            print('Another page yet...')
-        except KeyError:
-            print("Last page reached or one-page result.")
-            break
+        if choice.isdigit() and 1 <= int(choice) <= len(files):
+            selected = files[int(choice) - 1]
+            print(f"Using: {selected.name}\n")
+            return selected
 
-        response = client.playlistItems().list(
-            **kwargs,
-            pageToken=next_page_token
-        ).execute()
+        print("Invalid selection. Try again.")
 
-    video_names_file.close()
+# ==============================
+# MAIN
+# ==============================
+
+def main(username: str):
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "0"
+
+    service = get_service()
+    channel_id = get_channel_id(service, username)
+
+    playlists = get_all_playlists(service, channel_id)
+
+    print(f"Found {len(playlists)} playlists\n")
+
+    # for playlist in playlists:
+    #     name = playlist["snippet"]["title"]
+    #     pid = playlist["id"]
+
+    #     print(f"Fetching: {name}")
+    #     tracks = get_playlist_tracks(service, pid)
+
+    #     save_playlist(name, tracks)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
-    if len(sys.argv) < 3:
-        print('Usage: %s <Youtube User Name> <Youtube Playlist Name>' % sys.argv[0])
-        sys.exit("Provide more args, please")
+    script_name = Path(__file__).name
 
-    username = sys.argv[1]
-    playlistName = sys.argv[2]
+    if len(sys.argv) != 2:
 
-    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '0'
-    client = get_authenticated_service()
+        print(f"Usage: python {script_name} <username>")
+        sys.exit(1)
 
-    channelID=channelID_by_username(client, username,
-                                    part='snippet,contentDetails,statistics',
-                                    forUsername=username)
-
-    playlist_id=playlistID_by_playlistName(client, playlistName,
-                                           part='snippet,contentDetails',
-                                           channelId=channelID,
-                                           maxResults=50)
-
-    if (playlist_id is not None):
-        playlist_items_list_by_playlist_id(client, playlistName,
-                                      part='snippet,contentDetails',
-                                      maxResults=50,
-                                      playlistId=playlist_id)
-    else:
-        print("No playlist with the name %s", playlistName)
-    print("End of Program")
-    sys.exit(0)
+    main(sys.argv[1])
